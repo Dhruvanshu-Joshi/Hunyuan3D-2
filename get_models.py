@@ -16,4 +16,16 @@ snapshot_download(
     ],
 )
 
+snapshot_download(
+    repo_id="tencent/Hunyuan3D-2",
+    local_dir="models",
+    allow_patterns=["hunyuan3d-paint-v2-0-turbo/**"],  # <== download everything inside the subfolder
+)
+
+snapshot_download(
+    repo_id="tencent/Hunyuan3D-2",
+    local_dir="models",
+    allow_patterns=["hunyuan3d-delight-v2-0/**"],  # <== download everything inside the subfolder
+)
+
 print("Model downloaded to:", local_dir)
