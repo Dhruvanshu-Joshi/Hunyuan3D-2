@@ -1,29 +1,31 @@
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+# Use official Python slim base image for small footprint
+FROM python:3.10-slim
 
-ENV DEBIAN_FRONTEND=noninteractive
+# Set working directory
 WORKDIR /app
 
-# --- System dependencies ---
-RUN apt-get update && apt-get install -y \
-    python3.10 python3.10-dev python-is-python3 python3-pip \
+# Install system dependencies (you can remove unused ones later)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake ninja-build git curl unzip \
-    libgl1-mesa-glx libglib2.0-0 \
+    libgl1-mesa-glx libglib2.0-0 python3-dev \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# --- Install Python dependencies ---
+# Pre-copy only requirements to leverage Docker layer caching
 COPY requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
 
-# --- Copy code, models, assets ---
+# Install Python packages (cached if requirements.txt doesn’t change)
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+
+# Now copy the actual codebase (slower step, done after installing packages)
 COPY . .
 
-# --- Build and install custom rasterizer ---
+# Build and install the custom rasterizer wheel
 WORKDIR /app/hy3dgen/texgen/custom_rasterizer
-RUN python3 setup.py bdist_wheel && pip install dist/custom_rasterizer*.whl
+RUN python setup.py bdist_wheel && pip install dist/*.whl
 
-# --- Go back to app directory ---
+# Set working dir back to app
 WORKDIR /app
 
-# --- Run your script on container start ---
-CMD ["python3", "run_pipeline.py"]
+# Run your main script
+CMD ["python3", "-u", "rp_handler.py"]

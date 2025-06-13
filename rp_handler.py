@@ -39,7 +39,10 @@ def handler(event):
         final_mesh = paint_pipeline(mesh, image=image_path)
 
         # Step 3: Export mesh
-        output_path = "/app/output_model.glb"
+        # output_path = "/app/output_model.glb"
+        output_dir = os.path.join(os.getcwd(), "outputs")
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, "output_model.glb")
         final_mesh.export(output_path)
 
         print("Mesh exported successfully.")
