@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Marine Creature to 3D</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f8ff;
+      margin: 0;
+      padding: 40px;
+      color: #333;
+    }
+
+    h1 {
+      color: #2a5d84;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    form {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      font-size: 16px;
+      width: 300px;
+      border: 1px solid #aaa;
+      border-radius: 6px;
+    }
+
+    button {
+      padding: 10px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #2a5d84;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #1d405c;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    #images {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .image-option {
+      border: 4px solid transparent;
+      border-radius: 10px;
+      max-width: 200px;
+      height: auto;
+      transition: transform 0.2s, border-color 0.3s;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .image-option:hover {
+      transform: scale(1.05);
+    }
+
+    .image-option.selected {
+      border-color: #2ecc71;
+    }
+
+    #send-btn {
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Text to 3D Generator</h1>
+
+  <form id="creature-form">
+    <input type="text" id="animal" name="animal" placeholder="Enter marine creature name..." required>
+    <button type="submit" id="submit-btn">Fetch Images</button>
+  </form>
+
+  <h2>Select one image:</h2>
+  <div id="images"></div>
+
+  <button id="send-btn" disabled>Send Selected Image to Backend</button>
+
+  <script>
+    const form = document.getElementById("creature-form");
+    const imagesDiv = document.getElementById("images");
+    const sendBtn = document.getElementById("send-btn");
+
+    let selectedImageDataUrl = null;
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      imagesDiv.innerHTML = '';
+      sendBtn.disabled = true;
+      selectedImageDataUrl = null;
+
+      const formData = new FormData(form);
+      const res = await fetch('/fetch_images', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) {
+        alert("Error fetching images");
+        return;
+      }
+
+      const data = await res.json();
+      data.images.forEach((src) => {
+        const img = document.createElement("img");
+        img.src = src;
+        img.className = "image-option";
+        img.onclick = () => {
+          document.querySelectorAll('.image-option').forEach(i => i.classList.remove('selected'));
+          img.classList.add('selected');
+          selectedImageDataUrl = src;
+          sendBtn.disabled = false;
+        };
+        imagesDiv.appendChild(img);
+      });
+    };
+
+    sendBtn.onclick = async () => {
+      if (!selectedImageDataUrl) return;
+
+      const blob = await (await fetch(selectedImageDataUrl)).blob();
+      const file = new File([blob], "selected_image.png", { type: "image/png" });
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch('/submit_image', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (res.ok) {
+        alert("Image successfully sent to backend.");
+      } else {
+        alert("Failed to send image to backend.");
+      }
+    };
+  </script>
+</body>
+</html>

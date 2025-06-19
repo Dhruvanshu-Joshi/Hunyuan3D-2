@@ -4,7 +4,7 @@ import glob
 
 # Dynamically locate the custom rasterizer .so path
 rasterizer_libs = glob.glob(
-    "/app/hy3dgen/texgen/custom_rasterizer/build/lib.*/*custom_rasterizer_kernel*.so"
+    os.path.join(os.getcwd(), "hy3dgen", "texgen", "custom_rasterizer", "build", "lib.*", "*custom_rasterizer_kernel*.so")
 )
 if rasterizer_libs:
     sys.path.append(os.path.dirname(rasterizer_libs[0]))

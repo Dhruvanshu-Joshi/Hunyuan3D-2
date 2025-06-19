@@ -1,23 +1,25 @@
 import os
+from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
 from PIL import Image
-from io import BytesIO
 from rembg import remove
+from io import BytesIO
+import base64
 
-def get_relevant_wikipedia_image(article_title: str, show_each=True, save_path=None):
+def get_relevant_wikipedia_image(article_title: str, show_each=True, save_path=None, return_all=False):
     """
     Fetches relevant images from a Wikipedia article, removes their backgrounds,
-    and lets the user choose the best one.
+    and lets the user choose the best one (or returns all).
 
     Args:
         article_title (str): The title of the Wikipedia article.
         show_each (bool): Whether to display each image as it's loaded.
         save_path (str or None): Optional path to save the selected image.
+        return_all (bool): If True, returns all fetched images (as base64 PNG).
 
     Returns:
-        PIL.Image: The selected image with background removed.
+        PIL.Image or list[str]: The selected image or list of base64 images if return_all is True.
     """
 
     def get_main_article_image(title):
@@ -59,7 +61,7 @@ def get_relevant_wikipedia_image(article_title: str, show_each=True, save_path=N
     article_name_lower = article_name.lower()
     fetched_images = []
 
-    # Step 1: Fetch main article image from REST API
+    # Step 1: Fetch main article image
     main_image_url = get_main_article_image(article_title)
     if main_image_url:
         try:
@@ -121,29 +123,33 @@ def get_relevant_wikipedia_image(article_title: str, show_each=True, save_path=N
         except Exception as e:
             print(f"Failed to process {full_url}: {e}")
 
-    # Step 3: Prompt user to select one
     if not fetched_images:
         print("No relevant images found.")
         return None
-    else:
-        while True:
-            try:
-                selected = int(input(f"\nEnter the image number to select (0 to {len(fetched_images)-1}): "))
-                if 0 <= selected < len(fetched_images):
-                    chosen_image = fetched_images[selected][2]
-                    print(f"\nYou selected image #{selected}: {fetched_images[selected][1]}")
-                    chosen_image.show(title="Selected Image")
 
-                    if save_path:
-                        chosen_image.save(save_path)
-                        print(f"Image saved to: {save_path}")
+    # Return all images as base64 (for frontend)
+    if return_all:
+        result_base64 = []
+        for _, _, img in fetched_images:
+            buffer = BytesIO()
+            img.save(buffer, format="PNG")
+            encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+            result_base64.append(f"data:image/png;base64,{encoded}")
+        return result_base64
 
-                    return chosen_image
-                else:
-                    print("Invalid index. Try again.")
-            except ValueError:
-                print("Please enter a valid number.")
-
-# --- Example usage ---
-if __name__ == "__main__":
-    img = get_relevant_wikipedia_image("Grey reef shark", save_path="shark_image.png")
+    # Prompt user to select one
+    while True:
+        try:
+            selected = int(input(f"\nEnter the image number to select (0 to {len(fetched_images)-1}): "))
+            if 0 <= selected < len(fetched_images):
+                chosen_image = fetched_images[selected][2]
+                print(f"\nYou selected image #{selected}: {fetched_images[selected][1]}")
+                chosen_image.show(title="Selected Image")
+                if save_path:
+                    chosen_image.save(save_path)
+                    print(f"Image saved to: {save_path}")
+                return chosen_image
+            else:
+                print("Invalid index. Try again.")
+        except ValueError:
+            print("Please enter a valid number.")

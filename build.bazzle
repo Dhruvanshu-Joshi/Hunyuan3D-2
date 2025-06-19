@@ -1,0 +1,31 @@
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
+
+oci_image(
+    name = "custom_image",
+    base = "//:python_base",
+    cmd = ["python3", "-u", "rp_handler.py"],
+    tars = [":app_layer"],
+    entrypoint = None,
+)
+
+oci_push(
+    name = "push_custom_image",
+    image = ":custom_image",
+    repository = "index.docker.io/dhruvanshujoshi/custom_image",
+    remote_tags = ["latest"],
+    platforms = ["linux/amd64", "linux/arm64"],
+)
+
+# Optional: Define base image as a target
+oci_image(
+    name = "python_base",
+    base = "python:3.10-slim",
+)
+
+# Tar layer that includes your app, deps, checkpoints
+genrule(
+    name = "app_layer",
+    outs = ["app.tar"],
+    cmd = "tar -cf $@ --exclude='*.pyc' --exclude='__pycache__' *",
+    srcs = glob(["**", "*"], exclude=["bazel-**", "BUILD.bazel"]),
+)
